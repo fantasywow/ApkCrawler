@@ -1,4 +1,3 @@
-# coding=utf-8
 
 import re
 import requests
@@ -9,16 +8,14 @@ from bs4 import BeautifulSoup
 
 def getURLContent(url):
     headers = {
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Connection': 'close',
         'Referer': 'http://app.mi.com/topList',
-        'Cookie': 'JSESSIONID=aaaWYqTT3MMdVfeRHjMev; __utma=127562001.883425548.1452953270.1452953270.1452953270.1; __utmc=127562001; __utmz=127562001.1452953270.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)'
+        'Cookie': 'xmuuid=XMGUEST-BDD43C30-C5EE-11E6-9B29-0F5E9AEBE945; xm_user_www_num=0; lastsource=www.google.com.sg; JSESSIONID=aaabPP0ZLlDRQc0zVY6Ov; mstz=79fe2eae924d2a2e-ba0da9b90ad3370d|javascript%3Avoid(0)%3B|1604934595.83|pcpid||; mstuid=1482153986920_5787; xm_vistor=1482153986920_5787_1487426211470-1487426548064; __utma=127562001.6929003.1487419365.1487435725.1487489751.5; __utmb=127562001.2.10.1487489751; __utmc=127562001; __utmz=127562001.1487419365.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36'
     }
-
-    headers['User-Agent'] = "Mozilla/5.0 (Windows NT 6.3; WOW64; rv:35.0) Gecko/20100101 Firefox/35.0"
-
     try:
         r = requests.get(url, headers=headers, timeout=10)
         r.raise_for_status()
@@ -28,81 +25,54 @@ def getURLContent(url):
         print(e)
         return None
     except requests.exceptions.ConnectionError as e:
-        r.status_code = "Connection refused"
         print(e)
         return None
     else:
         return r.content
 
-
 def fetchApkinfoFromWebpage(weburl):
-    apklist = []
-    html_doc = getURLContent(weburl)
-    soup = BeautifulSoup(html_doc)
+    apkList = []
+    htmlDoc = getURLContent(weburl)
+    soup = BeautifulSoup(htmlDoc)
     for item in soup.findAll(attrs={"class": "applist"})[0]:
-        item_soup = BeautifulSoup(str(item))
-        apk_name_cn = item_soup.find_all('h5')[0].get_text()
-        apk_webpage = "http://app.mi.com" + item_soup.find_all('a')[0].get('href')
+        itemSoup = BeautifulSoup(str(item))
+        apkNameCn = itemSoup.find_all('h5')[0].get_text()
+        apkWebpage = "http://app.mi.com" + itemSoup.find_all('a')[0].get('href')
         downloadlist = []
         # 反复重试
         while len(downloadlist) == 0:
-            html_detal = getURLContent(apk_webpage)
-            soup2 = BeautifulSoup(html_detal)
+            htmlDetal = getURLContent(apkWebpage)
+            soup2 = BeautifulSoup(htmlDetal)
             downloadlist = soup2.findAll(attrs={"class": "download"})
 
         downloadurl = downloadlist[0].get('href')
-        apk_id = downloadurl.split("/")[-1]
+        apkId = downloadurl.split("/")[-1]
 
-        apkstring = "%s|%s|%s" % (apk_id, apk_name_cn, apk_webpage)
+        apkString = "%s|%s|%s" % (apkId, apkNameCn, apkWebpage)
         # 记录写到文件里
+        print(apkString)
         with codecs.open("apkinfo.txt", "a+", "utf-8") as fp:
-            fp.write(apkstring)
+            fp.write(apkString)
             fp.write("\n")
-        downloadApk(apk_id, apk_name_cn+".apk")
-        apklist.append(apkstring)
+        downloadApk(apkId, apkNameCn+".apk")
+        apkList.append(apkString)
 
-
-    return apklist
-
-
-def get_apk_real_downloadurl(apkid):
-    apkurl_prefix = "http://app.mi.com/download/"
-    s = requests.session()
-    headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3",
-        "Accept-Encoding": "gzip, deflate,sdch",
-        "Host": "app.mi.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36",
-        "Connection": "keep-alive",
-        "Cache-Control": "no-cache",
-    }
-    s.headers.update(headers)
-    content = ''
-    # 反复重试
-    while len(content) == 0:
-        resp = s.get(apkurl_prefix + str(apkid), timeout=1000, allow_redirects=False)
-        content = resp.content
-    print(content)
-    template = '<a href="(.*?)">here</a>'
-    real_url = re.compile(template)
-    real_url = re.search(real_url, content.decode('utf-8')).group(1)
-    return real_url
-
+    return apkList
 
 def downloadApk(apkid, apkfilename):
     s = requests.session()
     headers = {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3",
-        "Accept-Encoding": "gzip, deflate,sdch",
-        "Host": "app.mi.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.111 Safari/537.36",
-        "Connection": "keep-alive",
-        "Cache-Control": "no-cache",
+        'Accept-Language': 'zh-CN,zh;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, sdch',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Connection': 'keep-alive',
+        'Host': 'app.mi.com',
+        'Cookie': 'xmuuid=XMGUEST-BDD43C30-C5EE-11E6-9B29-0F5E9AEBE945; xm_user_www_num=0; lastsource=www.google.com.sg; JSESSIONID=aaabPP0ZLlDRQc0zVY6Ov; mstz=79fe2eae924d2a2e-ba0da9b90ad3370d|javascript%3Avoid(0)%3B|1604934595.83|pcpid||; mstuid=1482153986920_5787; xm_vistor=1482153986920_5787_1487426211470-1487426548064; __utma=127562001.6929003.1487419365.1487435725.1487489751.5; __utmb=127562001.2.10.1487489751; __utmc=127562001; __utmz=127562001.1487419365.1.1.utmcsr=(direct)|utmccn=(direct)|utmcmd=(none)',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36',
+        'Cache-Control': 'no-cache'
     }
+
     s.headers.update(headers)
-    s.headers['Host'] = 'app.mi.com'
     resp = s.get('http://app.mi.com/download/' + str(apkid), timeout=100, allow_redirects=False)
     content = resp.content
     template = '<a href="(.*?)">here</a>'
@@ -117,8 +87,6 @@ def downloadApk(apkid, apkfilename):
         with open(apkfilename, 'wb+') as f:
             f.write(content)
 
-
-
 if __name__ == "__main__":
     allapklist = []
     # 选择要下载的页数
@@ -127,7 +95,7 @@ if __name__ == "__main__":
     for weburl in appswebpages:
         apklist = fetchApkinfoFromWebpage(weburl)
         allapklist.extend(apklist)
-    print(len(allapklist))
+    print("总共获取记录："len(allapklist))
 
 
 
