@@ -30,7 +30,7 @@ def getURLContent(url):
     else:
         return r.content
 
-def fetchApkinfoFromWebpage(weburl):
+def getFromWebpage(weburl):
     apkList = []
     htmlDoc = getURLContent(weburl)
     soup = BeautifulSoup(htmlDoc)
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     appswebpages = ["http://app.mi.com/topList?page=%d" % i for i in range(1, 43)]
 
     for weburl in appswebpages:
-        apklist = fetchApkinfoFromWebpage(weburl)
+        apklist = getFromWebpage(weburl)
         allapklist.extend(apklist)
     print("总共获取记录："+len(allapklist))
 
