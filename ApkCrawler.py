@@ -95,7 +95,7 @@ if __name__ == "__main__":
     for weburl in appswebpages:
         apklist = fetchApkinfoFromWebpage(weburl)
         allapklist.extend(apklist)
-    print("总共获取记录："len(allapklist))
+    print("总共获取记录："+len(allapklist))
 
 
 
